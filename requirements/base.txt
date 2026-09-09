@@ -36,9 +36,9 @@ click-plugins==1.1.1.2 \
 click-repl==0.3.0 \
     --hash=sha256:17849c23dba3d667247dc4defe1757fff98694e90fe37474f3feebb69ced26a9 \
     --hash=sha256:fb7e06deb8da8de86180a33a9da97ac316751c094c6899382da7feeeeb51b812
-cron-descriptor==1.4.5 \
-    --hash=sha256:736b3ae9d1a99bc3dbfc5b55b5e6e7c12031e7ba5de716625772f8b02dcd6013 \
-    --hash=sha256:f51ce4ffc1d1f2816939add8524f206c376a42c87a5fca3091ce26725b3b1bca
+cron-descriptor==2.1.0 \
+    --hash=sha256:e280efae0e375e2cbc62846f833888f12c7921d2d11ab0dca598f94c51af8639 \
+    --hash=sha256:ecddb8b2f6c5286398949aaefe185364666af74f33b01877c61378e1fd4e38e6
 django==5.2.17 \
     --hash=sha256:9d4d93be539a18ab80d058eb515900e10951e04c537c5a6b394fc49528d3251f \
     --hash=sha256:f04fb3b36ee119e1af4fa1d397d5fd6cf12700f49321e84d4f4c642c5b1973db

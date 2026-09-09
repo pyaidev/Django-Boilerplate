@@ -60,9 +60,9 @@ coverage==7.16.0 \
     --hash=sha256:c1bcfe470a796fbea6234accd81d258a31574dc0b7bf569e16be757572c4de17 \
     --hash=sha256:dcd3dafcdd78305d27c59a1006b53a4990acb89e68d8fbe0992f4f83503c827f \
     --hash=sha256:e9883a2f8206ce3af59117dc278e5d043fea06912bca3f199816129e5e2de354
-cron-descriptor==1.4.5 \
-    --hash=sha256:736b3ae9d1a99bc3dbfc5b55b5e6e7c12031e7ba5de716625772f8b02dcd6013 \
-    --hash=sha256:f51ce4ffc1d1f2816939add8524f206c376a42c87a5fca3091ce26725b3b1bca
+cron-descriptor==2.1.0 \
+    --hash=sha256:e280efae0e375e2cbc62846f833888f12c7921d2d11ab0dca598f94c51af8639 \
+    --hash=sha256:ecddb8b2f6c5286398949aaefe185364666af74f33b01877c61378e1fd4e38e6
 distlib==0.4.3 \
     --hash=sha256:4b0ce306c966eb73bc3a7b6abad017c556dadd92c44701562cd528ac7fde4d5b \
     --hash=sha256:f152097224a0ae24be5a0f6bae1b9359af82133bce63f98a95f86cae1aede9ed
