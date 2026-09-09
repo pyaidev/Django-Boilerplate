@@ -1,24 +1,155 @@
-version: "3.9"
+name: django-boilerplate
+
+x-app: &app
+  image: django-boilerplate-app:local
+  build:
+    context: .
+    target: runtime
+  env_file: .env
+  init: true
+  restart: unless-stopped
+  security_opt:
+    - no-new-privileges:true
+  cap_drop: [ALL]
+  networks: [backend]
+  volumes:
+    - media_data:/app/media
 
 services:
+  test:
+    profiles: [test]
+    build:
+      context: .
+      target: test
+    environment:
+      DJANGO_SETTINGS_MODULE: core.settings.test
+      TEST_DATABASE_URL: ${DATABASE_URL}
+      TEST_REDIS_URL: redis://redis:6379/15
+    networks: [backend]
+    depends_on:
+      db: {condition: service_healthy}
+      redis: {condition: service_healthy}
+
   db:
-    image: postgres:latest
-    restart: always
-    env_file:
-      - ./.env
+    image: postgres:16-bookworm
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-boilerplate}
+      POSTGRES_USER: ${POSTGRES_USER:-boilerplate}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Run make init first}
     volumes:
-      - ./postgres_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
+    networks: [backend]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      interval: 5s
+      timeout: 3s
+      retries: 15
+
+  redis:
+    image: redis:7.4-alpine
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "256mb", "--maxmemory-policy", "noeviction"]
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    networks: [backend]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 15
+
+  migrate:
+    <<: *app
+    restart: "no"
+    command: ["python", "manage.py", "migrate", "--noinput"]
+    depends_on:
+      db: {condition: service_healthy}
+      redis: {condition: service_healthy}
 
   app:
-    build: .
-    volumes:
-      - .:/app
-      - ./static:/app/static
+    <<: *app
     ports:
-      - "8001:8001"
-    command: bash -c "python manage.py collectstatic --no-input && python manage.py migrate && python manage.py runserver 0.0.0.0:8001"
-    env_file:
-      - .env
+      - "127.0.0.1:${APP_PORT:-8001}:8000"
     depends_on:
-      - db
+      migrate: {condition: service_completed_successfully}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/ready/', timeout=4)"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
 
+  worker:
+    <<: *app
+    command: ["celery", "-A", "core", "worker", "--loglevel=INFO", "--concurrency=2", "--hostname=worker@%h"]
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A core inspect ping --destination worker@$$HOSTNAME --timeout=5"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  beat:
+    <<: *app
+    command: ["celery", "-A", "core", "beat", "--loglevel=INFO"]
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+
+  prometheus:
+    image: django-boilerplate-prometheus:local
+    build: ./monitoring/prometheus
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=15d
+      - --storage.tsdb.retention.size=2GB
+    volumes:
+      - prometheus_data:/prometheus
+    ports:
+      - "127.0.0.1:${PROMETHEUS_PORT:-9090}:9090"
+    networks: [backend]
+    depends_on:
+      app: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:9090/-/ready"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  grafana:
+    image: django-boilerplate-grafana:local
+    build: ./monitoring/grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?Run make init first}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+    volumes:
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "127.0.0.1:${GRAFANA_PORT:-3000}:3000"
+    networks: [backend]
+    depends_on:
+      prometheus: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:3000/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+networks:
+  backend:
+
+volumes:
+  postgres_data:
+  redis_data:
+  media_data:
+  prometheus_data:
+  grafana_data:

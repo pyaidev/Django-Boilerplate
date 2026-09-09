@@ -1,0 +1,2 @@
+# Regenerate dev.txt with make lock.
+-r dev.txt

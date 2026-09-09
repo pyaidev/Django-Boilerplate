@@ -1,0 +1,51 @@
+[project]
+name = "django-boilerplate"
+version = "1.0.0"
+requires-python = ">=3.13,<3.14"
+dependencies = [
+  "Django>=5.2,<5.3",
+  "psycopg[binary]>=3.2,<4",
+  "django-environ>=0.12,<1",
+  "django-cors-headers>=4.7,<5",
+  "django-jazzmin>=3,<4",
+  "drf-spectacular>=0.28,<1",
+  "djangorestframework>=3.16,<4",
+  "django-filter>=25,<26",
+  "gunicorn>=23,<26",
+  "whitenoise>=6.9,<7",
+  "redis>=5.2,<7",
+  "django-redis>=5.4,<7",
+  "celery[redis]>=5.5,<6",
+  "django-prometheus>=2.3,<3",
+  "prometheus-client>=0.21,<1",
+  "sentry-sdk[django,celery]>=2.25,<3",
+  "django-storages[s3]>=1.14,<2",
+  "django-simple-history>=3.8,<4",
+  "django-axes>=8,<9",
+  "django-celery-beat>=2.8,<3",
+]
+
+[dependency-groups]
+dev = ["pytest>=8.3,<10", "pytest-django>=4.10,<5", "pytest-cov>=6,<8", "ruff>=0.11,<1", "pre-commit>=4,<5"]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "core.settings.test"
+testpaths = ["tests"]
+addopts = "-ra --strict-markers"
+markers = ["redis: requires TEST_REDIS_URL for real Redis concurrency checks"]
+
+[tool.ruff]
+target-version = "py313"
+line-length = 110
+extend-exclude = ["postgres_data", "static", "media"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+ignore = ["E501"]
+
+[tool.coverage.run]
+source = ["apps", "core"]
+omit = ["*/migrations/*", "core/settings/*", "core/asgi.py", "core/wsgi.py"]

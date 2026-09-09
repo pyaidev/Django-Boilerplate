@@ -1,0 +1,52 @@
+name: CI
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-bookworm
+        env:
+          POSTGRES_DB: boilerplate
+          POSTGRES_USER: boilerplate
+          POSTGRES_PASSWORD: ci-password
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U boilerplate -d boilerplate"
+          --health-interval 5s --health-timeout 3s --health-retries 15
+      redis:
+        image: redis:7.4-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s --health-timeout 3s --health-retries 15
+    env:
+      DJANGO_SETTINGS_MODULE: core.settings.test
+      TEST_DATABASE_URL: postgresql://boilerplate:ci-password@localhost:5432/boilerplate
+      TEST_REDIS_URL: redis://localhost:6379/15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.6.2"
+          python-version: "3.13"
+          enable-cache: true
+      - run: uv sync --frozen
+      - run: make lint check
+      - run: uv run --frozen pytest --cov --cov-report=term-missing
+      - name: Validate OpenAPI schema
+        run: uv run --frozen python manage.py spectacular --validate --fail-on-warn --file /tmp/schema.yml
+      - name: Check requirements exports
+        run: |
+          uv export --frozen --no-dev --format requirements-txt --output-file requirements/base.txt --quiet
+          uv export --frozen --format requirements-txt --output-file requirements/dev.txt --quiet
+          git diff --exit-code -- requirements/
+      - name: Build runtime image
+        run: docker build --target runtime -t boilerplate-ci .
+      - name: Validate Prometheus configuration
+        run: |
+          docker run --rm --entrypoint promtool -v "$PWD/monitoring/prometheus:/etc/prometheus:ro" prom/prometheus:v3.14.0 check config /etc/prometheus/prometheus.yml
