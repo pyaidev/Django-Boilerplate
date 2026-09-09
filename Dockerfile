@@ -1,4 +1,4 @@
-FROM python:3.13-slim-bookworm AS dependencies
+FROM python:3.14-slim-bookworm AS dependencies
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 WORKDIR /app
 RUN python -m venv /opt/venv
@@ -6,7 +6,7 @@ ENV PATH="/opt/venv/bin:$PATH"
 COPY requirements/base.txt requirements/base.txt
 RUN pip install --no-cache-dir --require-hashes -r requirements/base.txt
 
-FROM python:3.13-slim-bookworm AS runtime
+FROM python:3.14-slim-bookworm AS runtime
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PATH="/opt/venv/bin:$PATH"
 WORKDIR /app
 COPY --from=dependencies /opt/venv /opt/venv
